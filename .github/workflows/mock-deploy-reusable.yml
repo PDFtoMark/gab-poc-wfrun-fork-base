@@ -1,0 +1,49 @@
+name: Mock Deploy App To Environment
+# Local stand-in for epam/ai-dial-ci/.github/workflows/deploy-development.yml@4.13.1
+# (same job shape/environment; the gitlab-pipeline-trigger-action step is replaced by
+# a run step that reports which secrets reached the job, so no real GitLab is contacted).
+on:
+  workflow_call:
+    inputs:
+      gitlab-project-id:
+        type: string
+        description: The ID or path of the project owned by the authenticated user
+        required: true
+      gitlab-project-ref:
+        type: string
+        description: The branch or tag to run the pipeline on
+        default: "master"
+      environment-name:
+        type: string
+        description: The GitHub environment name to use for the deployment
+        default: "development"
+    secrets:
+      DEPLOY_HOST:
+        required: true
+      DEPLOY_TRIGGER_TOKEN:
+        required: true
+      DEPLOY_ACCESS_TOKEN:
+        required: true
+
+jobs:
+  trigger-pipeline:
+    runs-on: ubuntu-latest
+    concurrency: ${{ inputs.environment-name }}
+    environment:
+      name: ${{ inputs.environment-name }}
+    steps:
+      - name: Deploy environment (mock)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_TRIGGER_TOKEN: ${{ secrets.DEPLOY_TRIGGER_TOKEN }}
+          DEPLOY_ACCESS_TOKEN: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
+        run: |
+          echo "MOCK: would POST ${DEPLOY_HOST}/api/v4/projects/${{ inputs.gitlab-project-id }}/trigger/pipeline ref=${{ inputs.gitlab-project-ref }}"
+          echo "DEPLOY_TRIGGER_TOKEN matches expected mock value: $([ "$DEPLOY_TRIGGER_TOKEN" = "MOCK_TRIGGER_TOKEN_POC" ] && echo YES || echo NO)"
+          echo "DEPLOY_ACCESS_TOKEN matches expected mock value: $([ "$DEPLOY_ACCESS_TOKEN" = "MOCK_ACCESS_TOKEN_POC" ] && echo YES || echo NO)"
+          echo "DEPLOY_HOST value: $DEPLOY_HOST"
+          echo "upstream run event=${{ github.event.workflow_run.event }}"
+          echo "upstream head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "upstream head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "upstream head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "upstream prs=${{ toJSON(github.event.workflow_run.pull_requests) }}"
